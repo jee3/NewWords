@@ -19,6 +19,7 @@ output_dir = os.path.join(current_dir, '..', 'data', 'output')
 
 visited_links = set()
 
+
 def extract_unique_words(url, prefix):
     try:
         response = requests.get(url)
