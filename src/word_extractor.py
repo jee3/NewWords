@@ -7,6 +7,7 @@ import string
 import re
 from collections import OrderedDict
 import os
+from urllib.parse import urljoin
 
 nltk.download('stopwords')
 
@@ -15,10 +16,10 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 
 # 拼接输出文件的路径
 output_dir = os.path.join(current_dir, '..', 'data', 'output')
-output_file_path = os.path.join(output_dir, 'words_list.txt')
 
+visited_links = set()
 
-def extract_unique_words(url):
+def extract_unique_words(url, prefix):
     try:
         response = requests.get(url)
 
@@ -49,10 +50,31 @@ def extract_unique_words(url):
             # 去除重复的单词，并保留它们在列表中的顺序
             unique_words = list(OrderedDict.fromkeys(filtered_words))
 
+            # 将 URL 中的特殊字符替换为下划线，避免影响文件名
+            sanitized_url = url.replace('/', '_').replace(':', '_').replace('.', '_')
+
+            # 拼接文件名
+            filename = "{}_{}.txt".format('words_list', sanitized_url)
+            # 拼接输出文件的路径
+            output_file_path = os.path.join(output_dir, filename)
+            print(output_file_path)
+
             # 写入文件
             with open(output_file_path, 'w', encoding='utf-8') as file:
                 for word in unique_words:
                     file.write(word + '\n')
+
+            # 提取页面中的链接并过滤
+            links = [link.get('href') for link in tree.xpath('//a[@href]') if link.get('href').startswith(prefix)]
+
+            # 递归处理链接
+            for relative_link in links:
+                if relative_link not in visited_links:
+                    full_url = urljoin(url, relative_link)
+                    print(full_url)
+                    visited_links.add(relative_link)
+                    extract_unique_words(full_url, relative_link)
+
         else:
             print("Failed to retrieve content. Status code:", response.status_code)
 
